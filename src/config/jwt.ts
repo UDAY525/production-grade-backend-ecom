@@ -15,3 +15,10 @@ export function generateRefreshToken(userId: string) {
 export function verifyRefreshToken(token: string) {
   return jwt.verify(token, env.JWT_REFRESH_SECRET) as jwt.JwtPayload;
 }
+
+export function verifyAccessToken(token: string) {
+  return jwt.verify(token, env.JWT_ACCESS_SECRET) as jwt.JwtPayload & {
+    sub: string;
+    role: string;
+  };
+}
