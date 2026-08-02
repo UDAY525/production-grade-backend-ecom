@@ -12,6 +12,7 @@ const TARGET_DIR = path.join(
 
 // 2. Define the list of files you want to generate
 const FILES_TO_CREATE = [
+  "category.routes.ts",
   "category.controller.ts",
   "category.service.ts",
   "category.repository.ts",
