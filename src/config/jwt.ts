@@ -1,5 +1,6 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { env } from "./env.js";
+import type { AuthUser } from "../common/types/auth.types.js";
 
 export function generateAccessToken(userId: string, role: string) {
   return jwt.sign({ sub: userId, role }, env.JWT_ACCESS_SECRET, {
@@ -17,8 +18,5 @@ export function verifyRefreshToken(token: string) {
 }
 
 export function verifyAccessToken(token: string) {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as jwt.JwtPayload & {
-    sub: string;
-    role: string;
-  };
+  return jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthUser;
 }

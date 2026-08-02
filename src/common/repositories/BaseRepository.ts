@@ -9,7 +9,7 @@ export abstract class BaseRepository {
   }
 
   // 2. Add 'extends QueryResultRow' to the generic type placeholder constraint
-  protected query<T extends QueryResultRow = QueryResultRow>(
+  protected query<T extends QueryResultRow>(
     sql: string,
     params: unknown[] = [],
   ): Promise<QueryResult<T>> {
