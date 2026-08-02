@@ -3,7 +3,8 @@ import type { Request, Response } from "express";
 import { ApiResponse } from "../../../common/response/ApiResponse";
 
 import { ProductService } from "./product.service";
-import { createProductSchema } from "./product.validation";
+import { createProductSchema, getProductsSchema } from "./product.validation";
+import { AppError } from "../../../common/errors/AppError";
 
 const service = new ProductService();
 
@@ -16,5 +17,21 @@ export class ProductController {
     res
       .status(201)
       .json(ApiResponse.success(product, "Product created successfully"));
+  }
+  async getAll(req: Request, res: Response) {
+    const query = getProductsSchema.parse(req.query);
+
+    const products = await service.getAll(query);
+
+    res.json(ApiResponse.success(products));
+  }
+
+  async getById(req: Request, res: Response) {
+    const { id } = req.params;
+    if (!id || Array.isArray(id)) {
+      throw new AppError(400, "Product ID is missing from the request URL");
+    }
+    const product = await service.getById(id);
+    res.json(ApiResponse.success(product));
   }
 }

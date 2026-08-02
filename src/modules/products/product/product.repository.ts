@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import { BaseRepository } from "../../../common/repositories/BaseRepository";
 import type {
   CreateProductDto,
+  GetProductsQuery,
   InventoryDto,
   ProductImageDto,
   ProductVariantDto,
@@ -142,6 +143,195 @@ export class ProductRepository extends BaseRepository {
       ${placeholders.join(",")}
       `,
       values,
+    );
+  }
+
+  async getAll(query: GetProductsQuery) {
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+
+    let categoryJoin = "";
+
+    if (query.search) {
+      values.push(`%${query.search}%`);
+
+      conditions.push(
+        `(p.name ILIKE $${values.length}
+        OR p.description ILIKE $${values.length})`,
+      );
+    }
+
+    if (query.brandId) {
+      values.push(query.brandId);
+
+      conditions.push(`p.brand_id = $${values.length}`);
+    }
+
+    if (query.sellerId) {
+      values.push(query.sellerId);
+
+      conditions.push(`p.seller_id = $${values.length}`);
+    }
+
+    if (query.status) {
+      values.push(query.status);
+
+      conditions.push(`p.status = $${values.length}`);
+    }
+
+    if (query.categoryId) {
+      categoryJoin = `
+      INNER JOIN product_categories pc
+        ON pc.product_id = p.id
+    `;
+
+      values.push(query.categoryId);
+
+      conditions.push(`pc.category_id = $${values.length}`);
+    }
+
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const sortMap = {
+      newest: "p.created_at DESC",
+      oldest: "p.created_at ASC",
+      price_asc: "v.price ASC",
+      price_desc: "v.price DESC",
+    };
+
+    values.push(query.limit);
+    const limitIndex = values.length;
+
+    values.push((query.page! - 1) * query.limit!);
+    const offsetIndex = values.length;
+
+    return this.query(
+      `
+    SELECT
+      p.id,
+      p.name,
+      p.slug,
+      p.status,
+      p.created_at,
+
+      b.id   AS brand_id,
+      b.name AS brand_name,
+
+      v.id    AS variant_id,
+      v.price,
+
+      img.object_key
+
+    FROM products p
+
+    LEFT JOIN brands b
+      ON b.id = p.brand_id
+
+    LEFT JOIN product_variants v
+      ON v.product_id = p.id
+     AND v.is_default = true
+
+    LEFT JOIN product_images img
+      ON img.variant_id = v.id
+     AND img.sort_order = 0
+
+    ${categoryJoin}
+
+    ${where}
+
+    ORDER BY ${sortMap[query.sort!]}
+
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+    `,
+      values,
+    );
+  }
+
+  async findById(productId: string) {
+    return this.query(
+      `
+    SELECT
+      p.id,
+      p.name,
+      p.slug,
+      p.description,
+      p.status,
+
+      b.id   AS brand_id,
+      b.name AS brand_name,
+
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', c.id,
+              'name', c.name,
+              'slug', c.slug
+            )
+          )
+          FROM product_categories pc
+          JOIN categories c
+            ON c.id = pc.category_id
+          WHERE pc.product_id = p.id
+        ),
+        '[]'
+      ) AS categories,
+
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', v.id,
+              'sku', v.sku,
+              'title', v.title,
+              'price', v.price,
+              'comparePrice', v.compare_price,
+              'weight', v.weight,
+              'isDefault', v.is_default,
+
+              'inventory',
+              (
+                SELECT row_to_json(i)
+                FROM inventory i
+                WHERE i.variant_id = v.id
+              ),
+
+              'images',
+              (
+                SELECT COALESCE(
+                  json_agg(
+                    json_build_object(
+                      'id', pi.id,
+                      'objectKey', pi.object_key,
+                      'altText', pi.alt_text,
+                      'sortOrder', pi.sort_order
+                    )
+                    ORDER BY pi.sort_order
+                  ),
+                  '[]'
+                )
+                FROM product_images pi
+                WHERE pi.variant_id = v.id
+              )
+            )
+            ORDER BY v.is_default DESC
+          )
+          FROM product_variants v
+          WHERE v.product_id = p.id
+        ),
+        '[]'
+      ) AS variants
+
+    FROM products p
+
+    LEFT JOIN brands b
+      ON b.id = p.brand_id
+
+    WHERE p.id = $1
+    `,
+      [productId],
     );
   }
 }

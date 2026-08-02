@@ -38,3 +38,19 @@ export interface CreateProductDto {
 
   variants: ProductVariantDto[];
 }
+
+export interface GetProductsQuery {
+  page?: number | undefined;
+  limit?: number | undefined;
+
+  search?: string | undefined;
+
+  brandId?: string | undefined;
+  categoryId?: string | undefined;
+
+  sellerId?: string | undefined;
+
+  status?: "draft" | "active" | "archived" | undefined;
+
+  sort?: "newest" | "oldest" | "price_asc" | "price_desc" | undefined;
+}

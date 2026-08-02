@@ -4,6 +4,7 @@ import { protect } from "../common/middleware/auth.middleware";
 import { ApiResponse } from "../common/response/ApiResponse";
 import brandRoutes from "../modules/products/brand/brand.routes";
 import categoryRoutes from "../modules/products/category/category.routes";
+import productRoutes from "../modules/products/product/product.routes";
 
 const router = Router();
 
@@ -14,5 +15,5 @@ router.get("/me", protect, (req, res) => {
 
 router.use("/brands", brandRoutes);
 router.use("/categories", categoryRoutes);
-
+router.use("/products", productRoutes);
 export default router;

@@ -43,3 +43,23 @@ export const createProductSchema = z.object({
 
   variants: z.array(variantSchema).min(1),
 });
+
+export const getProductsSchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+
+  limit: z.coerce.number().min(1).max(100).default(20),
+
+  search: z.string().optional(),
+
+  brandId: z.string().uuid().optional(),
+
+  categoryId: z.string().uuid().optional(),
+
+  sellerId: z.string().uuid().optional(),
+
+  status: z.enum(["draft", "active", "archived"]).optional(),
+
+  sort: z
+    .enum(["newest", "oldest", "price_asc", "price_desc"])
+    .default("newest"),
+});
