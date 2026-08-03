@@ -3,7 +3,11 @@ import type { Request, Response } from "express";
 import { ApiResponse } from "../../../common/response/ApiResponse";
 
 import { ProductService } from "./product.service";
-import { createProductSchema, getProductsSchema } from "./product.validation";
+import {
+  createProductSchema,
+  getProductsSchema,
+  updateProductSchema,
+} from "./product.validation";
 import { AppError } from "../../../common/errors/AppError";
 
 const service = new ProductService();
@@ -33,5 +37,27 @@ export class ProductController {
     }
     const product = await service.getById(id);
     res.json(ApiResponse.success(product));
+  }
+
+  async update(req: Request, res: Response) {
+    const body = updateProductSchema.parse(req.body);
+
+    const product = await service.update(req.user, req.params.id, body);
+
+    res.json(ApiResponse.success(product, "Product updated successfully"));
+  }
+
+  async archive(req: Request, res: Response) {
+    await service.archive(req.user, req.params.id);
+
+    res.json(ApiResponse.success(null, "Product archived successfully"));
+  }
+
+  async getMine(req: Request, res: Response) {
+    const query = getProductsSchema.parse(req.query);
+
+    const products = await service.getMine(req.user, query);
+
+    res.json(ApiResponse.success(products));
   }
 }

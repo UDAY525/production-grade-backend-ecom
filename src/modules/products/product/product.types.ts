@@ -54,3 +54,12 @@ export interface GetProductsQuery {
 
   sort?: "newest" | "oldest" | "price_asc" | "price_desc" | undefined;
 }
+
+export interface UpdateProductDto {
+  name?: string;
+  slug?: string;
+  description?: string;
+  brandId?: string | null;
+  status?: "draft" | "active" | "archived";
+  categoryIds?: string[];
+}

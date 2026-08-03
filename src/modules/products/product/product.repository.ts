@@ -6,6 +6,7 @@ import type {
   InventoryDto,
   ProductImageDto,
   ProductVariantDto,
+  UpdateProductDto,
 } from "./product.types";
 
 export class ProductRepository extends BaseRepository {
@@ -332,6 +333,109 @@ export class ProductRepository extends BaseRepository {
     WHERE p.id = $1
     `,
       [productId],
+    );
+  }
+  async updateProduct(
+    productId: string,
+    sellerId: string,
+    data: UpdateProductDto,
+  ) {
+    const updates: string[] = [];
+    const values: unknown[] = [];
+
+    if (data.name !== undefined) {
+      values.push(data.name);
+      updates.push(`name = $${values.length}`);
+    }
+
+    if (data.slug !== undefined) {
+      values.push(data.slug);
+      updates.push(`slug = $${values.length}`);
+    }
+
+    if (data.description !== undefined) {
+      values.push(data.description);
+      updates.push(`description = $${values.length}`);
+    }
+
+    if (data.brandId !== undefined) {
+      values.push(data.brandId);
+      updates.push(`brand_id = $${values.length}`);
+    }
+
+    if (data.status !== undefined) {
+      values.push(data.status);
+      updates.push(`status = $${values.length}`);
+    }
+
+    values.push(sellerId);
+    updates.push(`updated_by = $${values.length}`);
+
+    updates.push(`updated_at = NOW()`);
+
+    values.push(productId);
+    values.push(sellerId);
+
+    return this.query(
+      `
+    UPDATE products
+    SET ${updates.join(", ")}
+
+    WHERE id = $${values.length - 1}
+      AND seller_id = $${values.length}
+
+    RETURNING *
+    `,
+      values,
+    );
+  }
+
+  async replaceCategories(
+    client: PoolClient,
+    productId: string,
+    categoryIds: string[],
+  ) {
+    await client.query(
+      `DELETE FROM product_categories
+     WHERE product_id = $1`,
+      [productId],
+    );
+
+    if (!categoryIds.length) return;
+
+    const values: unknown[] = [];
+
+    const placeholders = categoryIds.map((id, index) => {
+      values.push(productId, id);
+
+      return `($${index * 2 + 1}, $${index * 2 + 2})`;
+    });
+
+    await client.query(
+      `
+    INSERT INTO product_categories
+    (product_id, category_id)
+    VALUES ${placeholders.join(",")}
+    `,
+      values,
+    );
+  }
+
+  async archive(productId: string, sellerId: string) {
+    return this.query(
+      `
+    UPDATE products
+    SET
+      status = 'archived',
+      updated_by = $1,
+      updated_at = NOW()
+
+    WHERE id = $2
+      AND seller_id = $1
+
+    RETURNING id
+    `,
+      [sellerId, productId],
     );
   }
 }

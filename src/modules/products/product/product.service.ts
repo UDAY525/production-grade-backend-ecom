@@ -2,7 +2,11 @@ import { transaction } from "../../../database/transaction";
 
 import { ProductRepository } from "./product.repository";
 
-import type { CreateProductDto, GetProductsQuery } from "./product.types";
+import type {
+  CreateProductDto,
+  GetProductsQuery,
+  UpdateProductDto,
+} from "./product.types";
 
 import type { AuthUser } from "../../../common/types/auth.types";
 import { NotFoundError } from "../../../common/errors/NotFoundError";
@@ -48,5 +52,46 @@ export class ProductService {
     }
 
     return rows[0];
+  }
+
+  async update(user: AuthUser, productId: string, data: UpdateProductDto) {
+    return transaction(async (client) => {
+      const repository = new ProductRepository(client);
+
+      const { rows } = await repository.updateProduct(
+        productId,
+        user.sub,
+        data,
+      );
+
+      if (!rows.length) {
+        throw new NotFoundError("Product not found");
+      }
+
+      if (data.categoryIds) {
+        await repository.replaceCategories(client, productId, data.categoryIds);
+      }
+
+      return rows[0];
+    });
+  }
+
+  async archive(user: AuthUser, productId: string) {
+    const { rows } = await this.repository.archive(productId, user.sub);
+
+    if (!rows.length) {
+      throw new NotFoundError("Product not found");
+    }
+
+    return rows[0];
+  }
+
+  async getMine(user: AuthUser, query: GetProductsQuery) {
+    const { rows } = await this.repository.getAll({
+      ...query,
+      sellerId: user.sub,
+    });
+
+    return rows;
   }
 }

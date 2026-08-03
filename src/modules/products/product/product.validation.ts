@@ -63,3 +63,17 @@ export const getProductsSchema = z.object({
     .enum(["newest", "oldest", "price_asc", "price_desc"])
     .default("newest"),
 });
+
+export const updateProductSchema = z.object({
+  name: z.string().min(2).optional(),
+
+  slug: z.string().min(2).optional(),
+
+  description: z.string().optional(),
+
+  brandId: z.string().uuid().nullable().optional(),
+
+  status: z.enum(["draft", "active", "archived"]).optional(),
+
+  categoryIds: z.array(z.string().uuid()).optional(),
+});
